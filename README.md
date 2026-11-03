@@ -1,23 +1,41 @@
+<p align="center"><img src="assets/logo.png" width="96" alt="FileDocs"></p>
+
 # FileDocs
 
-Conversor e manipulador de PDF 100% local para Windows (tipo iLovePDF, mas sem enviar nada para a internet).
+Conversor e editor de PDF **100% local** para Windows, no estilo do iLovePDF, mas sem enviar nenhum arquivo para a internet.
+Funciona pelo **clique direito** no Explorer e tem **interface própria**.
 
-**PDF:** juntar, dividir, extrair/remover páginas, girar, comprimir, OCR (português + inglês), PDF → imagens.
-**Imagens:** converter entre JPG/PNG/WEBP/HEIC/BMP/TIF, imagens → PDF, OCR de imagem.
-**Office:** DOCX/XLSX/PPTX → PDF (requer LibreOffice: `winget install TheDocumentFoundation.LibreOffice`).
+| PDF | Converter |
+|---|---|
+| Juntar, dividir, extrair e remover páginas | PDF → imagens (PNG/JPG) |
+| Girar páginas | Imagens → PDF |
+| Comprimir | Converter imagens (JPG, PNG, WEBP, HEIC, BMP, TIF, ICO) |
+| OCR em português e inglês (PDF pesquisável) | Word/Excel/PowerPoint → PDF* |
 
-## Instalação
+\* Office → PDF exige o LibreOffice instalado (`winget install TheDocumentFoundation.LibreOffice`).
 
-1. Baixe/clone esta pasta para um lugar fixo (ex.: `C:\FileDocs`).
-2. Clique direito em `install.ps1` → **Executar com PowerShell**.
+## Instalar (usuários)
 
-Isso instala Python e Tesseract (se faltarem), as bibliotecas, o menu de contexto e um atalho na Área de Trabalho.
+1. Baixe `FileDocs-Setup-x.y.z.exe` na página **Releases** do GitHub.
+2. Execute e avance. Não precisa ser administrador nem instalar mais nada.
 
-## Uso
+Veja o [guia de uso](docs/USO.md).
 
-- **Clique direito** num PDF/imagem → *Mostrar mais opções* → **FileDocs** → Comprimir, OCR, Converter…
-- **Abrir no FileDocs** (ou o atalho): janela onde se arrasta arquivos, ordena e escolhe a operação.
-- Os resultados ficam ao lado do original (`arquivo_comprimido.pdf`, `arquivo_ocr.pdf`…); nada é sobrescrito.
+## Desenvolver
 
-Remover o menu: `.venv\Scripts\python filedocs.py --uninstall`
-Teste: `.venv\Scripts\python test_filedocs.py`
+```
+src/
+  main.py              ponto de entrada (argumentos de linha de comando)
+  filedocs/
+    __init__.py        versão, caminhos e ambiente (Tesseract)
+    ops.py             operações (juntar, OCR, comprimir...)
+    gui.py             interface PySide6
+    shell.py           menu de contexto do Explorer
+assets/                logo (SVG/PNG/ICO)
+vendor/tessdata/       idiomas do OCR (por, eng, osd)
+installer/             build.ps1, FileDocs.iss (Inno Setup), make_icon.py
+tests/test_ops.py      teste das operações
+docs/                  documentação
+```
+
+Detalhes em [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md).

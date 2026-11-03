@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#0EA5A4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <!-- documento -->
+  <path d="M80 46 H152 L190 84 V198 a12 12 0 0 1 -12 12 H80 a12 12 0 0 1 -12 -12 V58 a12 12 0 0 1 12 -12 Z" fill="#FFFFFF"/>
+  <path d="M152 46 V72 a12 12 0 0 0 12 12 H190 Z" fill="#C7D2FE"/>
+  <!-- setas de conversão (círculo centro 128,146 r 36) -->
+  <g fill="none" stroke-width="12" stroke-linecap="round">
+    <path d="M93.2 136.7 A36 36 0 0 1 157.5 125.4" stroke="#4F46E5"/>
+    <path d="M162.8 155.3 A36 36 0 0 1 98.5 166.6" stroke="#0EA5A4"/>
+  </g>
+  <path d="M167.3 118.5 L165.5 136.9 L147.7 132.3 Z" fill="#4F46E5" stroke="#4F46E5" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M88.7 173.5 L90.5 155.1 L108.3 159.7 Z" fill="#0EA5A4" stroke="#0EA5A4" stroke-width="5" stroke-linejoin="round"/>
+</svg>

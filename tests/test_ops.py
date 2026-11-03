@@ -1,9 +1,11 @@
-"""Teste rápido: python test_filedocs.py"""
+"""Teste rápido das operações: python tests/test_ops.py"""
+import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pymupdf
-import filedocs as fd
+from filedocs import ops as fd
 
 tmp = Path(tempfile.mkdtemp())
 
