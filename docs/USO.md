@@ -28,14 +28,21 @@ Ao terminar, aparecem os botões **Mostrar na pasta** e **Abrir**. Na compressã
 
 Clique com o botão direito no arquivo → **Mostrar mais opções** → **FileDocs**.
 
-| Arquivo | Opções |
-|---|---|
-| PDF | Abrir no FileDocs, Comprimir, OCR, Converter para PNG |
-| Imagem | Abrir no FileDocs, Converter para PDF / JPG / PNG, OCR → PDF pesquisável |
-| Word/Excel/PPT | Abrir no FileDocs, Converter para PDF |
+| Arquivo | Sempre | Só com um arquivo selecionado |
+|---|---|---|
+| PDF | Abrir no FileDocs, Juntar PDFs…, Comprimir, OCR, Converter para imagens PNG | Dividir em páginas, Girar 90°, Extrair páginas…, Remover páginas… |
+| Imagem | Abrir no FileDocs, Converter para PDF (um por imagem), Juntar em um PDF…, Converter para JPG/PNG, OCR | — |
+| Word/Excel/PPT | Abrir no FileDocs, Converter para PDF | — |
 
-Abre uma janelinha com o progresso. Com vários arquivos selecionados, todos são processados juntos numa única janela.
-Se der erro, o botão **Abrir no FileDocs** leva os arquivos para a janela completa.
+- Itens com **…** abrem a janela do FileDocs já na ferramenta certa. Em **Juntar**, os arquivos chegam em ordem de nome e dá para reordenar antes de executar.
+- Os demais abrem uma janelinha com o progresso. Com vários arquivos selecionados, todos são processados juntos numa única janela.
+- Se der erro, o botão **Abrir no FileDocs** leva os arquivos para a janela completa.
+
+## Word, Excel e PowerPoint para PDF
+
+Se o computador tiver o Microsoft Office, o FileDocs usa o próprio Office (resultado idêntico ao "Salvar como PDF").
+Se não tiver, o instalador oferece baixar o **LibreOffice** do site oficial durante a instalação (cerca de 360 MB).
+Para ativar depois, basta executar o instalador de novo e marcar essa opção.
 
 ## Onde ficam os resultados
 

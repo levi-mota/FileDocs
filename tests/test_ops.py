@@ -35,6 +35,13 @@ assert pymupdf.open(scan)[0].get_text().strip() == ""          # imagem, sem tex
 ocr = fd.op_ocr([scan])[0]
 assert "contrato" in pymupdf.open(ocr)[0].get_text().lower()   # OCR achou o texto
 
+assert len(fd.op_img2pdf([png, png], "each")) == 2                 # um PDF por imagem
+
+rtf = tmp / "carta.rtf"; rtf.write_text(r"{\rtf1 Declaracao de residencia}")
+engines = ([""] if fd.has_msoffice() else []) + (["libreoffice"] if fd.soffice() else [])
+for engine in engines:  # Microsoft Office e/ou LibreOffice, o que houver
+    assert "Declaracao" in pymupdf.open(fd.op_office2pdf([rtf], engine)[0])[0].get_text(), engine
+
 dest = tmp / "saida"; dest.mkdir()
 assert fd.run("merge", [a, b], "", dest)[0].parent == dest     # pasta de destino escolhida
 assert fd.run("merge", [a, b], "", dest)[0].name == "a_unido_2.pdf"  # não sobrescreve

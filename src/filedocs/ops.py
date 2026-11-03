@@ -1,4 +1,5 @@
 """Operações. Cada uma recebe (arquivos, parâmetro) e devolve a lista de saídas."""
+import os
 import re
 import shutil
 import subprocess
@@ -150,7 +151,9 @@ def op_ocr(files, lang=""):
     return res
 
 
-def op_img2pdf(files, _=""):
+def op_img2pdf(files, mode=""):
+    if mode == "each":  # um PDF por imagem
+        return [_save(_as_pdf(f), out_path(f, None, ".pdf")) for f in files]
     out = pymupdf.open()
     for f in files:
         out.insert_pdf(_as_pdf(f))
@@ -193,22 +196,90 @@ def op_convert_img(files, fmt="jpg"):
 
 
 def soffice():
-    for p in (shutil.which("soffice"), r"C:\Program Files\LibreOffice\program\soffice.exe"):
+    """LibreOffice baixado pelo instalador; senão, um instalado no sistema."""
+    from . import APP_DIR
+    for p in (APP_DIR / "libreoffice" / "program" / "soffice.exe", shutil.which("soffice"),
+              r"C:\Program Files\LibreOffice\program\soffice.exe"):
         if p and Path(p).exists():
-            return p
+            return str(p)
 
 
-def op_office2pdf(files, _=""):
+def _libreoffice_pdf(src, dst):
     exe = soffice()
     if not exe:
-        raise RuntimeError("LibreOffice não encontrado. Instale com:\nwinget install TheDocumentFoundation.LibreOffice")
+        raise RuntimeError("A conversão de Word/Excel/PowerPoint não está instalada. Execute o instalador do "
+                           "FileDocs de novo e marque “Conversão de Word, Excel e PowerPoint”.")
+    # Perfil próprio: não interfere num LibreOffice do usuário e não pede configuração inicial
+    profile = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "FileDocs" / "lo-profile"
+    src = Path(src)
+    with tempfile.TemporaryDirectory() as tmp:  # LibreOffice sobrescreve; converte à parte
+        subprocess.run([exe, f"-env:UserInstallation={profile.as_uri()}", "--headless", "--norestore",
+                        "--convert-to", "pdf", "--outdir", tmp, str(src)],
+                       check=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=300)
+        out = Path(tmp) / f"{src.stem}.pdf"
+        if not out.exists():
+            raise RuntimeError("O LibreOffice não conseguiu converter o arquivo.")
+        shutil.move(out, dst)
+
+
+WORD_EXT = {".doc", ".docx", ".odt", ".rtf", ".txt"}
+EXCEL_EXT = {".xls", ".xlsx", ".ods"}
+
+
+def _msoffice_pdf(src, dst):
+    """Converte usando o Microsoft Office instalado (Word/Excel/PowerPoint), sem abrir janelas."""
+    import pythoncom
+    import win32com.client
+    pythoncom.CoInitialize()  # roda numa thread de trabalho
+    src, dst = str(Path(src).resolve()), str(Path(dst).resolve())
+    ext = Path(src).suffix.lower()
+    try:
+        if ext in WORD_EXT:
+            app = win32com.client.DispatchEx("Word.Application")
+            app.DisplayAlerts = 0
+            try:
+                doc = app.Documents.Open(src, ReadOnly=True, AddToRecentFiles=False, Visible=False)
+                doc.ExportAsFixedFormat(dst, 17)  # wdExportFormatPDF
+                doc.Close(False)
+            finally:
+                app.Quit()
+        elif ext in EXCEL_EXT:
+            app = win32com.client.DispatchEx("Excel.Application")
+            app.DisplayAlerts = False
+            try:
+                wb = app.Workbooks.Open(src, ReadOnly=True, AddToMru=False)
+                wb.ExportAsFixedFormat(0, dst)  # xlTypePDF
+                wb.Close(False)
+            finally:
+                app.Quit()
+        else:
+            app = win32com.client.DispatchEx("PowerPoint.Application")
+            try:
+                pres = app.Presentations.Open(src, ReadOnly=True, Untitled=False, WithWindow=False)
+                pres.SaveAs(dst, 32)  # ppSaveAsPDF
+                pres.Close()
+            finally:
+                app.Quit()
+    finally:
+        pythoncom.CoUninitialize()
+
+
+def has_msoffice():
+    import winreg
+    try:
+        winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r"Word.Application\CLSID").Close()
+        return True
+    except OSError:
+        return False
+
+
+def op_office2pdf(files, engine=""):
+    """Microsoft Office quando existir (fidelidade maior); senão o LibreOffice embutido."""
+    convert = _libreoffice_pdf if engine == "libreoffice" or not has_msoffice() else _msoffice_pdf
     res = []
-    for f in map(Path, files):
-        with tempfile.TemporaryDirectory() as tmp:  # LibreOffice sobrescreve; converte à parte
-            subprocess.run([exe, "--headless", "--convert-to", "pdf", "--outdir", tmp, str(f)],
-                           check=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=300)
-            dst = out_path(f, None, ".pdf")
-            shutil.move(Path(tmp) / f"{f.stem}.pdf", dst)
+    for f in files:
+        dst = out_path(f, None, ".pdf")
+        convert(f, dst)
         res.append(dst)
     return res
 
@@ -242,7 +313,7 @@ OPS = {
     "convimg": ("Converter", "Converter imagem", "Troque o formato de imagens.",
                 op_convert_img, _choice("Formato", [("JPG", "jpg"), ("PNG", "png"), ("WEBP", "webp"), ("BMP", "bmp"),
                                                     ("TIFF", "tif"), ("ICO", "ico")], "jpg"), IMG_EXT),
-    "office2pdf": ("Converter", "Office para PDF", "Word, Excel e PowerPoint em PDF (requer LibreOffice).",
+    "office2pdf": ("Converter", "Office para PDF", "Word, Excel e PowerPoint em PDF.",
                    op_office2pdf, None, OFFICE_EXT),
 }
 

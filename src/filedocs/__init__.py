@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 APP = "FileDocs"
 
 FROZEN = getattr(sys, "frozen", False)
@@ -11,6 +11,8 @@ FROZEN = getattr(sys, "frozen", False)
 BASE = Path(sys._MEIPASS) if FROZEN else Path(__file__).resolve().parents[2]
 ASSETS = BASE / "assets"
 VENDOR = BASE / "vendor"
+# Pasta do FileDocs.exe; o instalador põe o LibreOffice baixado em <pasta>\libreoffice
+APP_DIR = Path(sys.executable).parent if FROZEN else BASE / "vendor"
 
 _tess = VENDOR / "tesseract"
 if not (_tess / "tesseract.exe").exists():

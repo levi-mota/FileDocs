@@ -1,5 +1,6 @@
 """Interface (PySide6). Segue o tema claro/escuro e a cor de destaque do Windows."""
 import os
+import re
 import subprocess
 import sys
 import time
@@ -219,7 +220,8 @@ class Worker(QThread):
         self.op, self.files, self.param, self.dest = op, files, param, dest
 
     def run(self):
-        groups = [[f] for f in self.files] if self.op in PER_FILE else [self.files]
+        each = self.op in PER_FILE or self.param == "each"
+        groups = [[f] for f in self.files] if each else [self.files]
         outs = []
         for i, g in enumerate(groups):
             self.progress.emit(i, len(groups), Path(g[0]).name)
@@ -423,8 +425,9 @@ class Main(QWidget):
                            (G_CLEAR, "Remover selecionados (Delete)", self.remove)):
             b = QPushButton(g, objectName="icon"); b.setToolTip(tip); b.setFont(icon_font(10)); b.clicked.connect(fn)
             tb.addWidget(b)
+        sort = QPushButton("Ordenar por nome", objectName="link"); sort.clicked.connect(self.sort_by_name)
         clear = QPushButton("Limpar lista", objectName="link"); clear.clicked.connect(self.clear)
-        tb.addWidget(clear); tb.addStretch()
+        tb.addWidget(sort); tb.addWidget(clear); tb.addStretch()
         self.count = QLabel(objectName="muted"); tb.addWidget(self.count)
         fc.addLayout(tb)
 
@@ -508,15 +511,25 @@ class Main(QWidget):
             self.auto_select(new)
         self.refresh()
 
+    def sort_by_name(self):
+        """Ordem natural (2 antes de 10), como no Explorer."""
+        key = lambda it: [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", it.text())]
+        items = sorted((self.list.takeItem(0) for _ in range(self.list.count())), key=key)
+        for it in items:
+            self.list.addItem(it)
+        self.refresh()
+
+    def set_tool(self, key):
+        for b in self.nav.buttons():
+            if b.property("op") == key:
+                b.setChecked(True); self.select_op()
+
     def auto_select(self, files):
         """Escolhe uma ferramenta compatível quando a atual não aceita os arquivos."""
         exts = {Path(f).suffix.lower() for f in files}
         if exts <= OPS[self.op()][5]:
             return
-        for key in (["img2pdf"] if exts <= IMG_EXT else ["office2pdf"] if exts <= OFFICE_EXT else ["merge"]):
-            for b in self.nav.buttons():
-                if b.property("op") == key:
-                    b.setChecked(True); self.select_op()
+        self.set_tool("img2pdf" if exts <= IMG_EXT else "office2pdf" if exts <= OFFICE_EXT else "merge")
 
     def browse(self):
         s = settings()
@@ -802,7 +815,7 @@ def _serve(name, parent, on_files):
     return server
 
 
-def start(files, quick=None):
+def start(files, quick=None, tool=None):
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     f = QFont(); f.setFamilies(["Segoe UI Variable Text", "Segoe UI", *ICON_FONTS]); f.setPointSizeF(10)
@@ -822,16 +835,23 @@ def start(files, quick=None):
         w.show()
         return app.exec()
 
-    lock = _claim(APP, files)
+    payload = ([f"tool={tool}"] if tool else []) + files
+    lock = _claim(APP, payload)
     if lock is None:
         return 0
     apply_theme(app)
     app.styleHints().colorSchemeChanged.connect(lambda *_: apply_theme(app))
     win = Main()
+    # Arquivos vindos do clique direito chegam um por processo, fora de ordem: ordena quando param de chegar
+    sorter = QTimer(win, singleShot=True, interval=800); sorter.timeout.connect(win.sort_by_name)
 
-    def incoming(fs):
-        win.add(fs); win.showNormal(); win.raise_(); win.activateWindow()
+    def incoming(lines):
+        tools = [l[5:] for l in lines if l.startswith("tool=")]
+        if tools:
+            win.set_tool(tools[0]); sorter.start()
+        win.add([l for l in lines if not l.startswith("tool=")])
+        win.showNormal(); win.raise_(); win.activateWindow()
         return True
     _serve(APP, win, incoming)
-    win.add(files); win.show()
+    incoming(payload); win.show()
     return app.exec()

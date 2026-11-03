@@ -46,7 +46,7 @@
 | 🎨 | **Converter imagem** | JPG, PNG, WEBP, HEIC (iPhone), BMP, TIFF, ICO |
 | 📝 | **Office para PDF** | Word, Excel e PowerPoint* |
 
-<sub>* Requer o <a href="https://www.libreoffice.org/">LibreOffice</a> instalado: <code>winget install TheDocumentFoundation.LibreOffice</code></sub>
+<sub>* Usa o Microsoft Office do computador. Sem ele, o instalador oferece baixar o <a href="https://www.libreoffice.org/">LibreOffice</a> do site oficial.</sub>
 
 ## Clique direito
 
@@ -57,12 +57,12 @@ Selecione um ou vários arquivos no Explorer → **Mostrar mais opções** → *
   <img src="docs/img/janelinha-escura.png" width="420" alt="Concluído">
 </p>
 
-Com vários arquivos selecionados, todos são processados juntos numa única janela.
+Com vários arquivos selecionados, todos são processados juntos numa única janela. **Juntar PDFs…** abre a janela para você conferir a ordem antes de unir.
 
 ## Instalação
 
 1. Baixe o **`FileDocs-Setup-x.y.z.exe`** em [**Releases**](https://github.com/levi-mota/FileDocs/releases/latest).
-2. Execute e avance. Pronto.
+2. Execute e avance. Pronto. Se o PC não tiver Microsoft Office, deixe marcada a opção de baixar o LibreOffice para converter Word, Excel e PowerPoint.
 
 > Na primeira execução, o Windows pode mostrar "O Windows protegeu o computador", porque o instalador não tem assinatura digital.
 > Clique em **Mais informações → Executar assim mesmo**.

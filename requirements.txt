@@ -3,3 +3,4 @@ pymupdf
 ocrmypdf
 pillow
 pillow-heif
+pywin32
