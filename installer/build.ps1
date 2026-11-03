@@ -19,7 +19,7 @@ Copy-Item "$tess\tesseract.exe", "$tess\*.dll" vendor\tesseract -Force
 .\.venv\Scripts\pyinstaller --noconfirm --clean --windowed --name FileDocs `
     --icon "$root\assets\filedocs.ico" --paths "$root\src" `
     --add-data "$root\assets;assets" --add-data "$root\vendor\tessdata;vendor\tessdata" `
-    --collect-all ocrmypdf --copy-metadata pikepdf `
+    --collect-all ocrmypdf --copy-metadata pikepdf --exclude-module tkinter `
     --distpath dist --workpath build --specpath build `
     src\main.py
 if ($LASTEXITCODE) { throw "PyInstaller falhou" }

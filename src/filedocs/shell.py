@@ -57,8 +57,14 @@ def _args(action):
     return f'--op {action[1]} --param "{action[2]}" '
 
 
+def _notify_explorer():
+    """Avisa o Explorer que as associações mudaram; sem isso ele segue mostrando o menu antigo do cache."""
+    import ctypes
+    ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)  # SHCNE_ASSOCCHANGED, SHCNF_IDLIST
+
+
 def install():
-    uninstall()  # remove itens de versões anteriores
+    _remove_keys()  # itens de versões anteriores
     icon = str(ASSETS / "filedocs.ico")
     for exts, items in MENU.values():
         for ext in exts:
@@ -74,6 +80,7 @@ def install():
                     w.SetValueEx(k, "MultiSelectModel", 0, w.REG_SZ, "Single" if sel == "one" else "Player")
                 with w.CreateKey(w.HKEY_CURRENT_USER, key + r"\command") as k:
                     w.SetValueEx(k, "", 0, w.REG_SZ, f'{_launcher()} {_args(action)}"%1"')
+    _notify_explorer()
 
 
 def _rm(path):
@@ -93,7 +100,12 @@ def _rm(path):
         pass
 
 
-def uninstall():
+def _remove_keys():
     for exts, _ in MENU.values():
         for ext in exts:
             _rm(_key(ext))
+
+
+def uninstall():
+    _remove_keys()
+    _notify_explorer()
