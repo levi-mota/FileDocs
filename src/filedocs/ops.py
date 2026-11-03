@@ -2,22 +2,28 @@
 import re
 import shutil
 import subprocess
+import tempfile
+from contextvars import ContextVar
 from pathlib import Path
 
 import pymupdf
 
 IMG_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp", ".heic", ".gif"}
 OFFICE_EXT = {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".rtf", ".txt"}
+PDF_EXT = {".pdf"}
+
+_dest = ContextVar("dest", default=None)  # pasta de saída escolhida; None = ao lado do original
 
 
 def out_path(src, suffix, ext=None):
-    """arquivo_suffix.ext ao lado do original, sem sobrescrever."""
+    """[pasta]/arquivo_suffix.ext sem sobrescrever (suffix None = mesmo nome)."""
     src = Path(src)
-    p = src.with_name(f"{src.stem}_{suffix}{ext if ext is not None else src.suffix}")
-    n = 2
+    folder = Path(_dest.get() or src.parent)
+    ext = src.suffix if ext is None else ext
+    stem = src.stem if suffix is None else f"{src.stem}_{suffix}"
+    p, n = folder / f"{stem}{ext}", 2
     while p.exists():
-        p = src.with_name(f"{src.stem}_{suffix}_{n}{ext if ext is not None else src.suffix}")
-        n += 1
+        p, n = folder / f"{stem}_{n}{ext}", n + 1
     return p
 
 
@@ -198,27 +204,52 @@ def op_office2pdf(files, _=""):
         raise RuntimeError("LibreOffice não encontrado. Instale com:\nwinget install TheDocumentFoundation.LibreOffice")
     res = []
     for f in map(Path, files):
-        subprocess.run([exe, "--headless", "--convert-to", "pdf", "--outdir", str(f.parent), str(f)],
-                       check=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=300)
-        res.append(f.with_suffix(".pdf"))
+        with tempfile.TemporaryDirectory() as tmp:  # LibreOffice sobrescreve; converte à parte
+            subprocess.run([exe, "--headless", "--convert-to", "pdf", "--outdir", tmp, str(f)],
+                           check=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=300)
+            dst = out_path(f, None, ".pdf")
+            shutil.move(Path(tmp) / f"{f.stem}.pdf", dst)
+        res.append(dst)
     return res
 
 
-# id: (grupo, título, descrição, função, dica do parâmetro, valor padrão)
+def _choice(label, options, default):
+    return ("choice", label, options, default)
+
+
+# id: (grupo, título, descrição, função, parâmetro, extensões aceitas)
+# parâmetro: None | ("text", rótulo, exemplo) | ("choice", rótulo, [(rótulo, valor)], padrão)
 OPS = {
-    "merge":    ("PDF", "Juntar", "Une PDFs e imagens na ordem da lista", op_merge, None, ""),
-    "split":    ("PDF", "Dividir", "Uma página por arquivo", op_split, None, ""),
-    "extract":  ("PDF", "Extrair páginas", "Gera um PDF só com as páginas escolhidas", op_extract, "Páginas (ex.: 1-3,5,8-)", ""),
-    "delete":   ("PDF", "Remover páginas", "Tira páginas do PDF", op_delete, "Páginas (ex.: 2,4-6)", ""),
-    "rotate":   ("PDF", "Girar", "Gira todas as páginas", op_rotate, "Graus (90, 180, 270)", "90"),
-    "compress": ("PDF", "Comprimir", "Reduz o tamanho recomprimindo imagens", op_compress, "Qualidade 1-100", "60"),
-    "ocr":      ("PDF", "OCR", "Torna PDFs e imagens pesquisáveis", op_ocr, "Idiomas", "por+eng"),
-    "pdf2img":  ("Converter", "PDF → Imagens", "Cada página vira uma imagem", op_pdf2img, "Formato (png, jpg)", "png"),
-    "img2pdf":  ("Converter", "Imagens → PDF", "Junta imagens num PDF", op_img2pdf, None, ""),
-    "convimg":  ("Converter", "Converter imagem", "JPG, PNG, WEBP, HEIC, BMP, TIF, ICO", op_convert_img, "Formato de saída", "jpg"),
-    "office2pdf": ("Converter", "Office → PDF", "Word, Excel, PowerPoint (requer LibreOffice)", op_office2pdf, None, ""),
+    "merge": ("PDF", "Juntar PDF", "Combine PDFs e imagens em um único arquivo, na ordem da lista.",
+              op_merge, None, PDF_EXT | IMG_EXT),
+    "split": ("PDF", "Dividir PDF", "Separe cada página em um arquivo próprio.",
+              op_split, None, PDF_EXT),
+    "extract": ("PDF", "Extrair páginas", "Crie um novo PDF só com as páginas escolhidas.",
+                op_extract, ("text", "Páginas", "Ex.: 1-3, 5, 8-"), PDF_EXT),
+    "delete": ("PDF", "Remover páginas", "Tire páginas do documento.",
+               op_delete, ("text", "Páginas a remover", "Ex.: 2, 4-6"), PDF_EXT),
+    "rotate": ("PDF", "Girar PDF", "Gire todas as páginas do documento.",
+               op_rotate, _choice("Rotação", [("90° direita", "90"), ("180°", "180"), ("90° esquerda", "270")], "90"), PDF_EXT),
+    "compress": ("PDF", "Comprimir PDF", "Reduza o tamanho mantendo boa qualidade de leitura.",
+                 op_compress, _choice("Nível", [("Leve", "80"), ("Recomendado", "60"), ("Forte", "35")], "60"), PDF_EXT),
+    "ocr": ("PDF", "OCR", "Reconheça o texto de documentos escaneados para pesquisar e copiar.",
+            op_ocr, _choice("Idioma", [("Português + inglês", "por+eng"), ("Português", "por"), ("Inglês", "eng")], "por+eng"),
+            PDF_EXT | IMG_EXT),
+    "pdf2img": ("Converter", "PDF para imagem", "Transforme cada página em uma imagem.",
+                op_pdf2img, _choice("Formato", [("PNG", "png"), ("JPG", "jpg")], "png"), PDF_EXT),
+    "img2pdf": ("Converter", "Imagem para PDF", "Junte fotos e digitalizações em um PDF.",
+                op_img2pdf, None, IMG_EXT),
+    "convimg": ("Converter", "Converter imagem", "Troque o formato de imagens.",
+                op_convert_img, _choice("Formato", [("JPG", "jpg"), ("PNG", "png"), ("WEBP", "webp"), ("BMP", "bmp"),
+                                                    ("TIFF", "tif"), ("ICO", "ico")], "jpg"), IMG_EXT),
+    "office2pdf": ("Converter", "Office para PDF", "Word, Excel e PowerPoint em PDF (requer LibreOffice).",
+                   op_office2pdf, None, OFFICE_EXT),
 }
 
 
-def run(op, files, param=""):
-    return OPS[op][3](files, param)
+def run(op, files, param="", dest=None):
+    token = _dest.set(dest)
+    try:
+        return OPS[op][3](files, param)
+    finally:
+        _dest.reset(token)

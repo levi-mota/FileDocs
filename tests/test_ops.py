@@ -34,4 +34,8 @@ scan = fd.op_img2pdf([png])[0]
 assert pymupdf.open(scan)[0].get_text().strip() == ""          # imagem, sem texto
 ocr = fd.op_ocr([scan])[0]
 assert "contrato" in pymupdf.open(ocr)[0].get_text().lower()   # OCR achou o texto
+
+dest = tmp / "saida"; dest.mkdir()
+assert fd.run("merge", [a, b], "", dest)[0].parent == dest     # pasta de destino escolhida
+assert fd.run("merge", [a, b], "", dest)[0].name == "a_unido_2.pdf"  # não sobrescreve
 print("OK", tmp)
